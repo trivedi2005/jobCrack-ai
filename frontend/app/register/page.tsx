@@ -26,8 +26,8 @@ export default function RegisterPage() {
       return
     }
 
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters')
+    if (formData.password.length < 12) {
+      setError('Password must be at least 12 characters')
       return
     }
 
@@ -103,11 +103,11 @@ export default function RegisterPage() {
                 value={formData.password}
                 onChange={handleChange}
                 required
-                minLength={8}
+                minLength={12}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="••••••••"
               />
-              <p className="text-xs text-gray-500 mt-1">Must be at least 8 characters</p>
+                <p className="text-xs text-gray-500 mt-1">Must be at least 12 characters</p>
             </div>
 
             <div>

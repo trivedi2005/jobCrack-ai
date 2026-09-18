@@ -1,8 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from app.core.database import get_db
-from app.core.security import create_access_token, create_refresh_token, decode_token
-from app.schemas.user import UserCreate, UserLogin, Token, UserResponse, RefreshTokenRequest
+from app.core.security import create_access_token, create_refresh_token, decode_token, get_password_hash
+from app.schemas.user import UserCreate, UserLogin, Token, UserResponse, RefreshTokenRequest, ForgotPasswordRequest, ResetPasswordRequest
+from app.models.password_reset import PasswordResetToken
+from app.models.user import User
+from app.services.email_service import send_password_reset_email
+from app.core.config import settings
+from datetime import datetime, timedelta, timezone
+import hashlib
+import secrets
 from app.services.auth_service import AuthService
 from datetime import timedelta
 
@@ -88,3 +95,55 @@ async def logout():
     # In a production system, you might want to invalidate the token
     # For now, this is a placeholder
     return {"message": "Successfully logged out"}
+
+
+@router.post("/forgot-password")
+async def forgot_password(request: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """Send a reset link without revealing whether the email is registered."""
+    user = AuthService(db).get_user_by_email(request.email)
+    if user and user.is_active:
+        raw_token = secrets.token_urlsafe(48)
+        token = PasswordResetToken(
+            user_id=user.id,
+            token_hash=hashlib.sha256(raw_token.encode()).hexdigest(),
+            expires_at=datetime.now(timezone.utc) + timedelta(minutes=settings.PASSWORD_RESET_EXPIRE_MINUTES),
+        )
+        db.query(PasswordResetToken).filter(
+            PasswordResetToken.user_id == user.id,
+            PasswordResetToken.used == False,
+        ).update({"used": True})
+        db.add(token)
+        db.commit()
+        reset_url = f"{settings.FRONTEND_URL}/reset-password?token={raw_token}"
+        try:
+            send_password_reset_email(user.email, reset_url)
+        except RuntimeError:
+            db.delete(token)
+            db.commit()
+            raise HTTPException(status_code=503, detail="Password reset email is not configured")
+    return {"message": "If an account exists for that email, a password reset link has been sent."}
+
+
+@router.post("/reset-password")
+async def reset_password(request: ResetPasswordRequest, db: Session = Depends(get_db)):
+    token_hash = hashlib.sha256(request.token.encode()).hexdigest()
+    reset_token = db.query(PasswordResetToken).filter(
+        PasswordResetToken.token_hash == token_hash,
+        PasswordResetToken.used == False,
+        PasswordResetToken.expires_at > datetime.now(timezone.utc),
+    ).first()
+    if not reset_token:
+        raise HTTPException(status_code=400, detail="Reset link is invalid or expired")
+
+    user = db.query(User).filter(User.id == reset_token.user_id, User.is_active == True).first()
+    if not user:
+        raise HTTPException(status_code=400, detail="Reset link is invalid or expired")
+    user.hashed_password = get_password_hash(request.password)
+    reset_token.used = True
+    db.query(PasswordResetToken).filter(
+        PasswordResetToken.user_id == user.id,
+        PasswordResetToken.id != reset_token.id,
+        PasswordResetToken.used == False,
+    ).update({"used": True})
+    db.commit()
+    return {"message": "Password reset successfully"}

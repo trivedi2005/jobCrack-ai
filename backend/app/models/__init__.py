@@ -23,6 +23,7 @@ from app.models.preparation import PreparationPlan, PreparationTask, LearningTop
 from app.models.notification import Notification, NotificationPreference, NotificationType
 from app.models.admin import Report, AdminAction, ReportStatus
 from app.models.connection import Connection
+from app.models.password_reset import PasswordResetToken
 
 __all__ = [
     "User", "UserRole",
@@ -44,4 +45,5 @@ __all__ = [
     "Notification", "NotificationPreference", "NotificationType",
     "Report", "AdminAction", "ReportStatus",
     "Connection",
+    "PasswordResetToken",
 ]
