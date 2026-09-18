@@ -29,6 +29,7 @@ class ResumeResponse(ResumeBase):
 class ResumeAnalysisRequest(BaseModel):
     resume_id: int
     job_id: Optional[int] = None
+    target_role: Optional[str] = None
 
 
 class ResumeAnalysisResponse(BaseModel):
@@ -56,6 +57,11 @@ class ResumeTailorRequest(BaseModel):
     resume_id: int
     job_id: int
     suggestions: Optional[list] = None
+
+
+class ResumeRoleRequest(BaseModel):
+    resume_id: int
+    target_role: str
 
 
 class ResumeVersionResponse(BaseModel):

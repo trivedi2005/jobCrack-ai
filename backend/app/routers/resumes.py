@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.middleware.auth import get_current_user
 from app.models.user import User
-from app.schemas.resume import ResumeAnalysisRequest, ResumeAnalysisResponse, ResumeResponse
+from app.schemas.resume import ResumeAnalysisRequest, ResumeAnalysisResponse, ResumeResponse, ResumeRoleRequest, ResumeVersionResponse
 from app.services.resume_service import ResumeService
 
 router = APIRouter()
@@ -54,3 +54,25 @@ async def analyze_resume(
         return service.analyze_resume(request.resume_id, request.job_id)
     except ValueError as error:
         raise HTTPException(status_code=400, detail=str(error))
+
+
+@router.post("/tailor", response_model=ResumeVersionResponse)
+async def tailor_resume(
+    request: ResumeRoleRequest,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    service = ResumeService(db)
+    resume = service.get_resume(request.resume_id)
+    if not resume or resume.user_id != current_user.id:
+        raise HTTPException(status_code=404, detail="Resume not found")
+    content = (
+        f"ATS-tailored resume for {request.target_role}\n\n"
+        "Use measurable achievements, role-specific keywords, and clear sections. "
+        "Review and edit this version before submitting it to an employer."
+    )
+    return service.create_resume_version(
+        request.resume_id,
+        f"ATS version - {request.target_role}",
+        content,
+    )
