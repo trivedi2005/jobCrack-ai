@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.core.database import get_db
@@ -21,9 +21,11 @@ router = APIRouter()
 
 @router.get("/me/dashboard-summary")
 async def get_dashboard_summary(
+    response: Response,
     current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db),
 ):
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
     resume_count = db.query(func.count(Resume.id)).filter(Resume.user_id == current_user.id).scalar() or 0
     application_count = db.query(func.count(Application.id)).filter(Application.user_id == current_user.id).scalar() or 0
     interview_count = db.query(func.count(InterviewSession.id)).filter(InterviewSession.user_id == current_user.id).scalar() or 0
