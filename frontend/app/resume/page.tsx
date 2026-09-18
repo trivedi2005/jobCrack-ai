@@ -49,11 +49,14 @@ export default function ResumePage() {
   const authHeaders = () => ({ Authorization: `Bearer ${authService.getAccessToken()}` })
 
   const fetchResumes = async () => {
-    const response = await fetch(`${API_URL}/api/resumes/`, { headers: authHeaders(), cache: 'no-store' })
-    if (response.ok) {
+    try {
+      const response = await fetch(`${API_URL}/api/resumes/`, { headers: authHeaders(), cache: 'no-store' })
+      if (!response.ok) throw new Error('Unable to load resumes')
       const data: Resume[] = await response.json()
       setResumes(data)
       if (data[0]) setSelectedResumeId(data[0].id)
+    } catch {
+      setMessage('Unable to load your resumes. Please sign in again.')
     }
   }
 
@@ -66,11 +69,15 @@ export default function ResumePage() {
     setMessage('')
     const formData = new FormData()
     formData.append('file', selectedFile)
-    const response = await fetch(`${API_URL}/api/resumes/upload`, { method: 'POST', headers: authHeaders(), body: formData })
-    const data = await response.json()
-    if (!response.ok) setMessage(data.detail || 'Upload failed.')
-    else {
-      setMessage('Resume uploaded successfully.'); setSelectedFile(null); await fetchResumes(); setSelectedResumeId(data.id)
+    try {
+      const response = await fetch(`${API_URL}/api/resumes/upload`, { method: 'POST', headers: authHeaders(), body: formData })
+      const data = await response.json()
+      if (!response.ok) setMessage(data.detail || 'Upload failed.')
+      else {
+        setMessage('Resume uploaded successfully.'); setSelectedFile(null); await fetchResumes(); setSelectedResumeId(data.id)
+      }
+    } catch {
+      setMessage('Upload failed. Check that the backend is running and try again.')
     }
     setBusy(false)
   }
@@ -78,10 +85,14 @@ export default function ResumePage() {
   const analyzeResume = async () => {
     if (!selectedResumeId) { setMessage('Upload a resume before analyzing it.'); return }
     setBusy(true); setMessage('')
-    const response = await fetch(`${API_URL}/api/resumes/analyze`, { method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ resume_id: selectedResumeId }) })
-    const data = await response.json()
-    if (!response.ok) setMessage(data.detail || 'Analysis failed.')
-    else { setAnalysis(data); setMessage('ATS analysis completed.') }
+    try {
+      const response = await fetch(`${API_URL}/api/resumes/analyze`, { method: 'POST', headers: { ...authHeaders(), 'Content-Type': 'application/json' }, body: JSON.stringify({ resume_id: selectedResumeId }) })
+      const data = await response.json()
+      if (!response.ok) setMessage(data.detail || 'Analysis failed.')
+      else { setAnalysis(data); setMessage('ATS analysis completed.') }
+    } catch {
+      setMessage('Analysis failed. Check that the backend is running and try again.')
+    }
     setBusy(false)
   }
 
@@ -120,7 +131,7 @@ export default function ResumePage() {
               Upload your resume in PDF or DOCX format to get started with AI-powered analysis.
             </p>
             
-            <label className="block border-2 border-dashed border-gray-300 rounded-lg p-12 text-center hover:border-blue-500 transition cursor-pointer">
+            <div className="block border-2 border-dashed border-gray-300 rounded-lg p-12 text-center">
               <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600 mb-2">
                 Drag and drop your resume here, or click to browse
@@ -128,9 +139,10 @@ export default function ResumePage() {
               <p className="text-sm text-gray-500">
                 Supported formats: PDF, DOCX (Max 10MB)
               </p>
-              <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="sr-only" onChange={(event) => setSelectedFile(event.target.files?.[0] || null)} />
+              <label htmlFor="resume-file" className="inline-flex cursor-pointer rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">Choose PDF or DOCX</label>
+              <input id="resume-file" type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" className="sr-only" onChange={(event) => { setAnalysis(null); setSelectedFile(event.target.files?.[0] || null) }} />
               {selectedFile && <p className="mt-3 text-sm font-medium text-blue-700">Selected: {selectedFile.name}</p>}
-            </label>
+            </div>
 
             <div className="mt-6">
               <Button className="w-full" onClick={uploadResume} disabled={busy || !selectedFile}>
@@ -148,6 +160,7 @@ export default function ResumePage() {
               Get detailed insights about your resume's ATS compatibility and improvement suggestions.
             </p>
 
+            {!analysis && <p className="mb-6 rounded bg-gray-50 px-4 py-3 text-gray-600">Upload a resume and select Analyze Resume to see ATS scores.</p>}
             <div className="grid md:grid-cols-4 gap-6 mb-6">
               <div className="text-center">
                 <div className="text-4xl font-bold text-blue-600 mb-2">{analysis?.keyword_score ?? '-'}{analysis ? '%' : ''}</div>
