@@ -173,9 +173,11 @@ export default function ResumePage() {
               Get detailed insights about your resume's ATS compatibility and improvement suggestions.
             </p>
 
-            {!analysis && <p className="mb-6 rounded bg-gray-50 px-4 py-3 text-gray-600">Upload a resume and select Analyze Resume to see ATS scores.</p>}
-            <label htmlFor="target-role" className="mb-2 block text-sm font-medium text-gray-700">Role you are applying for</label>
-            <input id="target-role" value={targetRole} onChange={(event) => { setTargetRole(event.target.value); setAnalysis(null); setVersionCreated(false) }} placeholder="e.g. Frontend Developer" className="mb-6 w-full rounded-md border border-gray-300 px-3 py-2" />
+            {!selectedResumeId && <p className="mb-6 rounded bg-gray-50 px-4 py-3 text-gray-600">Upload a resume to unlock role-specific ATS analysis.</p>}
+            {selectedResumeId && <>
+              <label htmlFor="target-role" className="mb-2 block text-sm font-medium text-gray-700">Role you are applying for</label>
+              <input id="target-role" value={targetRole} onChange={(event) => { setTargetRole(event.target.value); setAnalysis(null); setVersionCreated(false) }} placeholder="e.g. Frontend Developer" className="mb-6 w-full rounded-md border border-gray-300 px-3 py-2" />
+            </>}
             <div className="grid md:grid-cols-4 gap-6 mb-6">
               <div className="text-center">
                 <div className="text-4xl font-bold text-blue-600 mb-2">{analysis?.keyword_score ?? '-'}{analysis ? '%' : ''}</div>
@@ -195,10 +197,10 @@ export default function ResumePage() {
               </div>
             </div>
 
-            <Button variant="outline" className="w-full" onClick={analyzeResume} disabled={busy || !selectedResumeId}>
+            {selectedResumeId && <Button variant="outline" className="w-full" onClick={analyzeResume} disabled={busy || !targetRole.trim()}>
               <Sparkles className="w-4 h-4 mr-2" />
-              Analyze Resume
-            </Button>
+              Analyze Resume for This Role
+            </Button>}
             {analysis && (analysis.overall_score || 0) < 90 && !versionCreated && (
               <div className="mt-4 rounded-lg border border-orange-200 bg-orange-50 p-4">
                 <p className="text-sm text-orange-800">This resume needs improvement for the {targetRole} role.</p>
