@@ -22,6 +22,7 @@ from app.models.application import Application, ApplicationEvent, ApplicationSta
 from app.models.preparation import PreparationPlan, PreparationTask, LearningTopic, TaskStatus
 from app.models.notification import Notification, NotificationPreference, NotificationType
 from app.models.admin import Report, AdminAction, ReportStatus
+from app.models.connection import Connection
 
 __all__ = [
     "User", "UserRole",
@@ -42,4 +43,5 @@ __all__ = [
     "PreparationPlan", "PreparationTask", "LearningTopic", "TaskStatus",
     "Notification", "NotificationPreference", "NotificationType",
     "Report", "AdminAction", "ReportStatus",
+    "Connection",
 ]

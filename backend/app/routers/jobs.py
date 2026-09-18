@@ -3,9 +3,28 @@ from sqlalchemy.orm import Session
 from typing import Optional
 from app.core.database import get_db
 from app.schemas.job import JobCreate, JobUpdate, JobResponse, JobListResponse, JobFilter
+from pydantic import BaseModel
+from app.models.company import Company
 from app.services.job_service import JobService
+from app.middleware.auth import get_current_active_user
+from app.models.user import User
+from sqlalchemy import func
+from app.models.job import Job
 
 router = APIRouter()
+
+
+class JobPostRequest(BaseModel):
+    company_name: str
+    title: str
+    description: str
+    location: str | None = None
+    job_type: str = "full-time"
+    work_mode: str = "remote"
+    experience_level: str = "entry"
+    responsibilities: str | None = None
+    requirements: str | None = None
+    application_url: str | None = None
 
 
 @router.get("/", response_model=dict)
@@ -83,15 +102,49 @@ async def get_job(job_id: int, db: Session = Depends(get_db)):
 @router.post("/", response_model=JobResponse)
 async def create_job(
     job_data: JobCreate,
+    current_user: User = Depends(get_current_active_user),
     db: Session = Depends(get_db)
 ):
     """Create a new job."""
+    if current_user.role.value != "recruiter":
+        raise HTTPException(status_code=403, detail="Only recruiter accounts can post jobs")
+    posts_today = db.query(func.count(Job.id)).filter(Job.posted_by_id == current_user.id, Job.posted_date >= func.current_date()).scalar() or 0
+    if posts_today >= 5:
+        raise HTTPException(status_code=429, detail="Daily job posting limit reached (5 jobs)")
     job_service = JobService(db)
     try:
         job = job_service.create_job(job_data)
+        job.posted_by_id = current_user.id
+        db.commit()
+        db.refresh(job)
         return job
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+
+
+@router.post("/post", response_model=JobResponse)
+async def post_daily_job(
+    job_data: JobPostRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db),
+):
+    if current_user.role.value != "recruiter":
+        raise HTTPException(status_code=403, detail="Only recruiter accounts can post jobs")
+    posts_today = db.query(func.count(Job.id)).filter(Job.posted_by_id == current_user.id, Job.posted_date >= func.current_date()).scalar() or 0
+    if posts_today >= 5:
+        raise HTTPException(status_code=429, detail="Daily job posting limit reached (5 jobs)")
+    company = db.query(Company).filter_by(name=job_data.company_name).first()
+    if not company:
+        company = Company(name=job_data.company_name)
+        db.add(company)
+        db.flush()
+    payload = job_data.model_dump(exclude={"company_name"})
+    payload["company_id"] = company.id
+    job = JobService(db).create_job(JobCreate(**payload))
+    job.posted_by_id = current_user.id
+    db.commit()
+    db.refresh(job)
+    return job
 
 
 @router.put("/{job_id}", response_model=JobResponse)

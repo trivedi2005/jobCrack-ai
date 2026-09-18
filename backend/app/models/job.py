@@ -32,6 +32,7 @@ class Job(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     company_id = Column(Integer, ForeignKey("companies.id", ondelete="CASCADE"), nullable=False)
+    posted_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     
     # Job Details
     title = Column(String, nullable=False, index=True)
@@ -80,6 +81,7 @@ class Job(Base):
     job_skills = relationship("JobSkill", back_populates="job")
     job_matches = relationship("JobMatch", back_populates="job")
     applications = relationship("Application", back_populates="job")
+    posted_by = relationship("User", foreign_keys=[posted_by_id])
 
 
 class JobSkill(Base):

@@ -5,7 +5,7 @@ from sqlalchemy import text
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.core.database import Base, engine
-from app.routers import auth, users, jobs, companies, resumes, matching, preparation, coding, interviews, applications, notifications, ai, skills
+from app.routers import auth, users, jobs, companies, resumes, matching, preparation, coding, interviews, applications, notifications, ai, skills, network
 
 logger = logging.getLogger(__name__)
 
@@ -82,6 +82,7 @@ app.include_router(interviews.router, prefix="/api/interviews", tags=["Interview
 app.include_router(applications.router, prefix="/api/applications", tags=["Applications"])
 app.include_router(notifications.router, prefix="/api/notifications", tags=["Notifications"])
 app.include_router(ai.router, prefix="/api/ai", tags=["AI"])
+app.include_router(network.router, prefix="/api/network", tags=["Network"])
 
 
 if __name__ == "__main__":

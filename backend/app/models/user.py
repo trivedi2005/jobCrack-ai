@@ -31,3 +31,5 @@ class User(Base):
     notifications = relationship("Notification", back_populates="user")
     notification_preferences = relationship("NotificationPreference", back_populates="user")
     preparation_plans = relationship("PreparationPlan", back_populates="user")
+    sent_connections = relationship("Connection", foreign_keys="Connection.requester_id")
+    received_connections = relationship("Connection", foreign_keys="Connection.recipient_id")

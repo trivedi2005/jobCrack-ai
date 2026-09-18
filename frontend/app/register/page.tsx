@@ -11,6 +11,7 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState<RegisterCredentials>({
     email: '',
     password: '',
+    role: 'candidate',
   })
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
@@ -43,7 +44,7 @@ export default function RegisterPage() {
     }
   }
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value,
@@ -66,6 +67,15 @@ export default function RegisterPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="role" className="block text-sm font-medium text-gray-700 mb-2">
+                Account type
+              </label>
+              <select id="role" name="role" value={formData.role} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md">
+                <option value="candidate">Student / Candidate</option>
+                <option value="recruiter">Hiring / Recruiter</option>
+              </select>
+            </div>
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Email

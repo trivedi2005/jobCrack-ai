@@ -21,7 +21,7 @@ class AuthService:
         new_user = User(
             email=user_data.email,
             hashed_password=hashed_password,
-            role="candidate"  # Default role
+            role=user_data.role,
         )
         
         self.db.add(new_user)

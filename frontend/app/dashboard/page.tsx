@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { authService } from '@/lib/auth'
-import { Briefcase, Target, BookOpen, FileText, Calendar, Settings, LogOut } from 'lucide-react'
+import { Briefcase, Target, BookOpen, FileText, Calendar, Users, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default function DashboardPage() {
@@ -31,19 +31,42 @@ export default function DashboardPage() {
   }, [router])
 
   const fetchUserData = async () => {
+    const headers = {
+      'Authorization': `Bearer ${authService.getAccessToken()}`,
+      'Cache-Control': 'no-cache',
+    }
     try {
-      const response = await fetch('http://localhost:8000/api/users/me', {
-        headers: {
-          'Authorization': `Bearer ${authService.getAccessToken()}`,
-        },
+      setSummary({
+        career_readiness: 0,
+        applications: 0,
+        interviews: 0,
+        practice_score: 0,
+        resume_count: 0,
+        tasks: [],
       })
-      if (!response.ok) return
+      const response = await fetch('http://localhost:8000/api/users/me', {
+        headers,
+        cache: 'no-store',
+      })
+      if (response.status === 401) {
+        authService.clearTokens()
+        router.push('/login')
+        return
+      }
+      if (!response.ok) throw new Error('Unable to load account')
       const userData = await response.json()
       setUser(userData)
       const summaryResponse = await fetch('http://localhost:8000/api/users/me/dashboard-summary', {
-        headers: { 'Authorization': `Bearer ${authService.getAccessToken()}` },
+        headers,
+        cache: 'no-store',
       })
-      if (summaryResponse.ok) setSummary(await summaryResponse.json())
+      if (summaryResponse.status === 401) {
+        authService.clearTokens()
+        router.push('/login')
+        return
+      }
+      if (!summaryResponse.ok) throw new Error('Unable to load dashboard summary')
+      setSummary(await summaryResponse.json())
     } catch (error) {
       console.error('Failed to fetch user data:', error)
     } finally {
@@ -145,7 +168,7 @@ export default function DashboardPage() {
         {/* Quick Actions */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
-          <div className="grid md:grid-cols-3 gap-4">
+          <div className="grid md:grid-cols-4 gap-4">
             <Link href="/jobs">
               <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition cursor-pointer">
                 <Briefcase className="w-8 h-8 text-blue-600 mb-3" />
@@ -165,6 +188,13 @@ export default function DashboardPage() {
                 <BookOpen className="w-8 h-8 text-blue-600 mb-3" />
                 <h3 className="font-semibold text-gray-900 mb-2">Start Preparation</h3>
                 <p className="text-gray-600 text-sm">Begin your interview preparation</p>
+              </div>
+            </Link>
+            <Link href="/network">
+              <div className="bg-white rounded-lg shadow p-6 hover:shadow-md transition cursor-pointer">
+                <Users className="w-8 h-8 text-blue-600 mb-3" />
+                <h3 className="font-semibold text-gray-900 mb-2">Grow Network</h3>
+                <p className="text-gray-600 text-sm">Connect with candidates and recruiters</p>
               </div>
             </Link>
           </div>
